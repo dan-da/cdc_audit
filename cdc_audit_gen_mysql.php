@@ -328,10 +328,8 @@ END;
         $table_body = '';
         $table_audit = $this->table_audit( $table );
         
-        $info[] = array( 'Field' => 'audit_insert_timestamp', 'Type' => 'timestamp', 'Null' => true, 'Comment' => 'Will be non-null when the record is inserted into source table' );
-        $info[] = array( 'Field' => 'audit_update_timestamp', 'Type' => 'timestamp', 'Null' => true, 'Comment' => 'Will be non-null when the record is updated in source table' );
-        $info[] = array( 'Field' => 'audit_delete_timestamp', 'Type' => 'timestamp', 'Null' => true, 'Comment' => 'Will be non-null when the record is deleted in source table' );
-        $info[] = array( 'Field' => 'audit_change_timestamp', 'Type' => 'timestamp', 'Null' => false, 'Comment' => 'Always non-null.  Updated when record is inserted, updated or deleted in source table' );
+        $info[] = array( 'Field' => 'audit_event', 'Type' => "enum('insert','update','delete')", 'Null' => false, 'Comment' => 'Indicates event that occurred in source table' );
+        $info[] = array( 'Field' => 'audit_timestamp', 'Type' => 'timestamp', 'Null' => false, 'Comment' => 'Updated when record is inserted, updated or deleted in source table' );
         $info[] = array( 'Field' => 'audit_pk', 'Type' => 'int(11)', 'Null' => false, 'Comment' => 'Audit table primary key, useful for sorting since mysql time data types are only granular to second level.' );
       
         $pk_cols = array();
@@ -367,7 +365,7 @@ END;
         }
     
         $lines[] = sprintf( $index_mask, implode( ', ', $pk_cols ) );
-        $lines[] = sprintf( $index_mask, '`audit_change_timestamp`' );
+        $lines[] = sprintf( $index_mask, '`audit_timestamp`' );
               
         $table_body = implode( ",\n", $lines );
         
@@ -402,16 +400,16 @@ END;
         
         $drop_trigger_mask = <<< 'END'
       
-DROP TRIGGER IF EXISTS %1$s;
+DROP TRIGGER IF EXISTS `%1$s`;
 
 END;
 
         $triggers_mask = <<< 'END'
 -- %1$s after INSERT trigger.
 DELIMITER @@
-CREATE TRIGGER %1$s_after_insert AFTER INSERT ON %1$s
+CREATE TRIGGER `%1$s_after_insert` AFTER INSERT ON `%1$s`
  FOR EACH ROW BEGIN
-  insert into %2$s(%3$s) values(%4$s);
+  insert into `%2$s` (%3$s) values(%4$s);
 
 %7$s
  END;
@@ -419,9 +417,9 @@ CREATE TRIGGER %1$s_after_insert AFTER INSERT ON %1$s
 
 -- %1$s after UPDATE trigger.      
 DELIMITER @@
-CREATE TRIGGER %1$s_after_update AFTER UPDATE ON %1$s
+CREATE TRIGGER `%1$s_after_update` AFTER UPDATE ON `%1$s`
  FOR EACH ROW BEGIN
-  insert into %2$s(%3$s) values(%5$s);
+  insert into `%2$s` (%3$s) values(%5$s);
 
 %8$s
  END;
@@ -429,9 +427,9 @@ CREATE TRIGGER %1$s_after_update AFTER UPDATE ON %1$s
 
 -- %1$s after DELETE trigger.
 DELIMITER @@
-CREATE TRIGGER %1$s_after_delete AFTER DELETE ON %1$s
+CREATE TRIGGER `%1$s_after_delete` AFTER DELETE ON `%1$s`
  FOR EACH ROW BEGIN
-  insert into %2$s(%3$s) values(%6$s);
+  insert into `%2$s` (%3$s) values(%6$s);
 
 %9$s
  END;
@@ -482,27 +480,20 @@ END;
         $old_vals = array();
         foreach( $info as $table_column ) {
             $cols[] = $table_column['Field'];
-            $new_vals[] = sprintf( 'NEW.%s', $table_column['Field'] );
-            $old_vals[] = sprintf( 'OLD.%s', $table_column['Field'] );
+            $new_vals[] = sprintf( 'NEW.`%s`', $table_column['Field'] );
+            $old_vals[] = sprintf( 'OLD.`%s`', $table_column['Field'] );
         }
         
         $insert_vals = $new_vals;
         $update_vals = $new_vals;
         $delete_vals = $old_vals;
         
-        $cols[] = 'audit_insert_timestamp';
-        $insert_vals[] = 'CURRENT_TIMESTAMP';
-        $update_vals[] = $delete_vals[] = 'null';
+        $cols[] = 'audit_event';
+        $insert_vals[] = "'insert'";
+        $update_vals[] = "'update'";      
+        $delete_vals[] = "'delete'";
         
-        $cols[] = 'audit_update_timestamp';
-        $update_vals[] = 'CURRENT_TIMESTAMP';
-        $insert_vals[] = $delete_vals[] = 'null';      
-        
-        $cols[] = 'audit_delete_timestamp';
-        $delete_vals[] = 'CURRENT_TIMESTAMP';
-        $insert_vals[] = $update_vals[] = 'null';      
-        
-        $cols[] = 'audit_change_timestamp';
+        $cols[] = 'audit_timestamp';
         $insert_vals[] = $update_vals[] = $delete_vals[] = 'CURRENT_TIMESTAMP';
         
         foreach( $cols as &$col ) {

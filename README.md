@@ -48,13 +48,13 @@ How does cdc_audit meet these requirements?
 cdc_audit breaks the CDC into three automated pieces:
 
  a) creation of audit tables for every source table we are interested in.
-    The audit tables contain all the columns of the source table plus timestamp
-    columns for insert, update, delete, change, and a new auto_increment primary
-    key: audit_pk. The change timestamp column represents any type of change to
-    the source row: insert, update, or delete. The audit_pk column provides a
-    unique id for each audit row, so we can easily identify new (unsynced) audit
-    rows. change_timestamp is unsuitable for this purpose because mysql only
-    stores date/time columns to 1 second granularity.
+    The audit tables contain all the columns of the source table plus audit
+    columns: audit_event, audit_timestamp, and audit_pk. The audit_event column
+    indicates the type of change to the source row: insert, update, or delete.
+    The audit_pk column provides a unique id for each audit row, so we can
+    easily identify new (unsynced) audit rows. audit_timestamp is unsuitable for
+    this purpose because mysql only stores date/time columns to 1 second
+    granularity.
     
  b) creation of triggers on the source table(s) to insert rows into the audit
     table(s) whenever a row is inserted, updated, or deleted.  This provides

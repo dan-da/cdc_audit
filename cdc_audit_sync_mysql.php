@@ -225,7 +225,7 @@ class cdc_audit_sync_mysql {
     }
     
     /**
-     * Syncs audit table and to csv file. 
+     * Syncs audit table to csv file. 
      */
     private function sync_table( $table ) {
         
