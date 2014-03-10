@@ -22,7 +22,7 @@ function main() {
     $config['pass'] = get_option( $opt, 'p', '' );
     $config['namespace_prefix'] = get_option( $opt, 'n', '' );
     $config['verbosity'] = get_option( $opt, 'v', 1 );
-    $config['output_dir'] = get_option( $opt, 'm', './cdc_audit_gen' );
+    $config['output_dir'] = get_option( $opt, 'm', './cdc_audit_sync' );
     $config['tables'] = get_option( $opt, 't', null );
     $config['stdout'] = STDOUT;
     
@@ -240,12 +240,32 @@ class cdc_audit_sync_mysql {
         if( !$fh ) {
             throw new Exception( sprintf( "Unable to open file %s for writing", $this->csv_path( $table ) ) );
         }
+        
+        if( $pk_last == -1 ) {
+            $this->write_csv_header_row( $fh, $result );
+        }
 
         while ($row = mysql_fetch_array($result, MYSQL_NUM)) {
             fputcsv( $fh, $row );
         }
         
         fclose( $fh );
+    }
+
+    /**
+     * given csv fh and mysql result, writes a csv header row with column names
+     */
+    private function write_csv_header_row( $fh, $result ) {
+        
+        $cols = array();
+        $i = 0;
+        while ($i < mysql_num_fields($result)) {
+            $meta = mysql_fetch_field($result, $i);
+            $cols[] = $meta->name;
+            $i ++;
+        }
+        
+        fputcsv( $fh, $cols );
     }
 
 
