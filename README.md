@@ -76,10 +76,11 @@ cdc_audit breaks the CDC into three automated pieces:
 Features
 ========
 
- - automates generation of audit tables
+ - automates generation of audit tables, one audit table per source table.
  - automates generation of triggers to populate audit tables
  - automates syncing of new rows in audit tables to .csv files.
  - Reads mysql information_schema to automatically determine tables and columns.
+ - fast triggers. only one insert and 0 selects per trigger execution.
  - Can generate tables + triggers for all database tables, or a specified list.
  - Can sync audit tables for all database tables, or a specified list.
  - Retains pre-existing trigger logic, if any, when generating AFTER triggers.
