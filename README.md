@@ -145,8 +145,7 @@ Usage
                                                           
    -t tables          comma separated list of tables.      default = generate for all tables
    
-   -w                 wipe (delete) all but the very last audit row after syncing.
-                      this operation is performed with a truncate and tmp table.
+   -w                 wipe (incremental delete) all but the last audit row after syncing.
                       
                       Note: this functionality is mostly untested!  dangerous!
    
