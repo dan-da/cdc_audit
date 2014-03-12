@@ -1,5 +1,9 @@
 cdc_audit - Software to automate change data capture via triggers for mysql.
 
+cdc_audit presently consists of two scripts:
+ - a script to auto generate mysql audit tables and triggers.
+ - a script to auto sync new rows in audit tables to a CSV file.
+
 EXPERIMENTAL!
 =============
 
