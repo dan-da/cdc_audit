@@ -55,7 +55,7 @@ function print_help() {
    
    echo <<< END
 
-   gen_mysql_triggers.php [Options] -d <db> [-h <host> -d <db> -u <user> -p <pass>
+   cdc_audit_gen_mysql.php [Options] -d <db> [-h <host> -d <db> -u <user> -p <pass>]
    
    Required:
    -d db              mysql database name

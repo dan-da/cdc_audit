@@ -83,6 +83,7 @@ Features
  - Can generate tables + triggers for all database tables, or a specified list.
  - Can sync audit tables for all database tables, or a specified list.
  - Retains pre-existing trigger logic, if any, when generating AFTER triggers.
+ - sync script option to delete all but last audit row, to keep source DB small.
  
 
 Requirements
@@ -94,6 +95,73 @@ Requirements
 
 Usage
 =====
+
+ $ ./cdc_audit_gen_mysql.php 
+
+   cdc_audit_gen_mysql.php [Options] -d <db> [-h <host> -d <db> -u <user> -p <pass>]
+   
+   Required:
+   -d db              mysql database name
+   
+   Options:
+   
+   -h HOST            hostname of machine running mysql.  default = localhost
+   -u USER            mysql username                      default = root
+   -p PASS            mysql password                      
+
+   -m audit_dir       path to write db audit files.       default = ./cdc_audit_gen.
+                                                          
+   -t tables         comma separated list of tables.      default = generate for all tables
+   
+   -n namespace      a prefix that will be pre-pended to all classnames.  This makes it
+                     possible to use the generated classes multiple times in the same project.
+                                                          default = no prefix.
+
+   -o file            Send all output to FILE
+   -v <number>        Verbosity level.  default = 1
+                        0 = silent except fatal error.
+                        1 = silent except warnings.
+                        2 = informational
+                        3 = debug. ( includes extra logging and source line numbers )
+                        
+    -?                Print this help.
+
+
+ $ ./cdc_audit_sync_mysql.php 
+
+
+   cdc_audit_sync_mysql.php [Options] -d <db> [-h <host> -d <db> -u <user> -p <pass>]
+   
+   Required:
+   -d db              mysql database name
+   
+   Options:
+   
+   -h HOST            hostname of machine running mysql.  default = localhost
+   -u USER            mysql username                      default = root
+   -p PASS            mysql password                      
+
+   -m output_dir      path to write db audit files.       default = ./cdc_audit_sync.
+                                                          
+   -t tables          comma separated list of tables.      default = generate for all tables
+   
+   -w                 wipe (delete) all but the very last audit row after syncing.
+                      this operation is performed with a truncate and tmp table.
+                      
+                      Note: this functionality is mostly untested!  dangerous!
+   
+   -o file            Send all output to FILE
+   -v <number>        Verbosity level.  default = 1
+                        0 = silent except fatal error.
+                        1 = silent except warnings.
+                        2 = informational
+                        3 = debug. ( includes extra logging and source line numbers )
+                        
+    -?                Print this help.
+
+
+Usage Examples
+==============
 
  First, unzip download package to a local directory anywhere.
 

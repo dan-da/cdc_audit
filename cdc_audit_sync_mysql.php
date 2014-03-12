@@ -9,7 +9,7 @@ exit ( main() );
  */
 function main() {
 
-    $opt = getopt("D:d:h:u:p:o:v:m:n:c:t:s:x?");
+    $opt = getopt("D:d:h:u:p:o:v:m:n:c:t:s:xw?");
     if( @$opt['?'] || !@$opt['d'] ){ 
         print_help();
         return -1;
@@ -24,6 +24,7 @@ function main() {
     $config['verbosity'] = get_option( $opt, 'v', 1 );
     $config['output_dir'] = get_option( $opt, 'm', './cdc_audit_sync' );
     $config['tables'] = get_option( $opt, 't', null );
+    $config['wipe'] = isset( $opt['w'] ) ? true : false;
     $config['stdout'] = STDOUT;
     
     if( isset( $opt['o'] ) ) {
@@ -68,7 +69,12 @@ function print_help() {
 
    -m output_dir      path to write db audit files.       default = ./cdc_audit_sync.
                                                           
-   -t tables         comma separated list of tables.      default = generate for all tables
+   -t tables          comma separated list of tables.      default = generate for all tables
+   
+   -w                 wipe (delete) all but the very last audit row after syncing.
+                      this operation is performed with a truncate and tmp table.
+                      
+                      Note: this functionality is mostly untested!  dangerous!
    
    -o file            Send all output to FILE
    -v <number>        Verbosity level.  default = 1
@@ -102,6 +108,7 @@ class cdc_audit_sync_mysql {
     private $output_dir;
     
     private $tables = null;
+    private $wipe = false;
     
     const log_error = 0;
     const log_warning = 1;
@@ -118,6 +125,7 @@ class cdc_audit_sync_mysql {
         $this->pass = $config['pass'];
         $this->db = $config['db'];
         $this->output_dir = $config['output_dir'];
+        $this->wipe = $config['wipe'];
     
         $tables = @$config['tables'] ? explode( ',', @$config['tables'] ) : null;
         if( $tables ) {
@@ -250,6 +258,64 @@ class cdc_audit_sync_mysql {
         }
         
         fclose( $fh );
+        
+        if( $this->wipe ) {
+            $this->wipe_audit_table( $table );
+        }
+    }
+
+    /**
+     * Wipes the audit table of all but the last row.
+     *
+     * Using delete is slow but plays well with concurrent connections.
+     * We use an incremental delete to avoid hitting the DB too hard
+     * when wiping a large table.
+     *
+     * truncate plus tmp table for the last record would be faster but I can't
+     * find any way to do that atomically without possibility of causing trouble
+     * for another session writing to the table.  Same thing for rename.
+     *
+     * For most applications, if this incremental wipe is performed during each
+     * regular sync, then the table should never grow so large that it becomes
+     * a major problem.
+     *
+     * @TODO:  add option to wipe only older than a specific age.
+     */
+    private function wipe_audit_table( $table ) {
+        
+        $this->log( sprintf( 'wiping audit table: %s', $table ), __FILE__, __LINE__, self::log_info );
+        
+        $incr_amount = 100;
+
+        $loop = 1;        
+        do {
+
+            if( $loop ++ > 1 ) {
+                sleep(1);
+            }
+            
+            $result = @mysql_query( sprintf( 'select count(audit_pk) as cnt, min(audit_pk) as min, max(audit_pk) as max from `%s`', $table ) );
+            $row = @mysql_fetch_assoc( $result );
+            
+            $cnt = @$row['cnt'];
+            $min = @$row['min'];
+            $max = @$row['max'];
+            
+            if( $cnt <= 1 || !$max ) {
+                break;
+            }
+
+            $delmax = min( $min + $incr_amount, $max );
+            $this->log( sprintf( 'wiping audit table rows %s to %s', $min, $delmax ), __FILE__, __LINE__, self::log_info );
+            
+            $query = sprintf( 'delete from `%s` where audit_pk >= %s and audit_pk < %s', $table, $min, $delmax );
+            $result = mysql_query( $query );
+            
+            if( !$result ) {
+                throw new Exception( sprintf( "mysql error while wiping %s rows.  %s", $incr_amount, $query  ) );
+            }
+            
+        } while( true );
     }
 
     /**
