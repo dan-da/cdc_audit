@@ -213,17 +213,13 @@ Known Issues
    
  - no locking is performed on the target CSV file at present.  This could
    cause file corruption.
- 
- - column header row should be written to .CSV file.
- 
- 
+  
 Todos
 =====
 
  - Use a lockfile to protect .CSV file.  Map-R nfs does not support flock().
  
- - Write column header row to CSV file.  Also, check the header row when initiating
-   sync to ensure that # of columns is unchanged and audit_pk column is correct.
+ - Check the CSV header row when initiating sync to ensure that # of columns is unchanged and audit_pk column is correct.
    
  - Auto-Detect schema changes to source table and apply to audit table.
  
