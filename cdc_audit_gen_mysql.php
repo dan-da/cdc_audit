@@ -363,8 +363,10 @@ END;
                 $pk_cols[] = sprintf( '`%s`', $table_column['Field'] );
             }
         }
-    
-        $lines[] = sprintf( $index_mask, implode( ', ', $pk_cols ) );
+
+        if( count($pk_cols ) ) {    
+            $lines[] = sprintf( $index_mask, implode( ', ', $pk_cols ) );
+        }
         $lines[] = sprintf( $index_mask, '`audit_timestamp`' );
               
         $table_body = implode( ",\n", $lines );
