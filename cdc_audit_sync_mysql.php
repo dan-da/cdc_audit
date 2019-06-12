@@ -164,18 +164,18 @@ class cdc_audit_sync_mysql {
             
             // Connect to the MySQL server
             $this->log( sprintf( 'Connecting to mysql. host = %s, user = %s, pass = %s ', $this->host, $this->user, $this->pass ),  __FILE__, __LINE__, self::log_debug );
-            $link = @mysql_connect($this->host,$this->user,$this->pass);
+            $link = @mysqli_connect($this->host,$this->user,$this->pass);
             if ($link){
                 $this->log( 'Connected to mysql.  Getting tables.',  __FILE__, __LINE__, self::log_info );
                 
                   // Select the database
-                if( !mysql_selectdb($this->db,$link) ) {
+                if( !mysqli_select_db($link, $this->db) ) {
                     throw new Exception( "Unable to select database {$this->db}");
                 }
                 
                 // Get all tables
-                $result = mysql_query('SHOW TABLES');
-                while ($row = mysql_fetch_array($result, MYSQL_NUM)) {
+                $result = mysqli_query($link, 'SHOW TABLES');
+                while ($row = mysqli_fetch_array($result, MYSQLI_NUM)) {
                     // Get table name
                     $table = $row[0]  ;
                     
@@ -189,7 +189,7 @@ class cdc_audit_sync_mysql {
                         continue;
                     }
                                         
-                    $this->sync_table( $table );
+                    $this->sync_table($link, $table);
                 }
                 
                 $this->log( sprintf( 'Successfully synced audit tables to %s', $this->output_dir ),  __FILE__, __LINE__, self::log_warning );
@@ -235,12 +235,12 @@ class cdc_audit_sync_mysql {
     /**
      * Syncs audit table to csv file. 
      */
-    private function sync_table( $table ) {
+    private function sync_table($link, $table) {
         
         $this->log( sprintf( "Processing table %s", $table ),  __FILE__, __LINE__, self::log_info );
         
         $pk_last = $this->get_latest_csv_row_pk( $table );
-        $result = mysql_query( sprintf( 'select * from `%s` where audit_pk > %s', $table, $pk_last ) );
+        $result = mysqli_query($link, sprintf( 'select * from `%s` where audit_pk > %s', $table, $pk_last ) );
         
         $mode = $pk_last == -1 ? 'w' : 'a';
         $fh = fopen( $this->csv_path( $table ), $mode );
@@ -253,14 +253,14 @@ class cdc_audit_sync_mysql {
             $this->write_csv_header_row( $fh, $result );
         }
 
-        while ($row = mysql_fetch_array($result, MYSQL_NUM)) {
+        while ($row = mysqli_fetch_array($result, MYSQLI_NUM)) {
             fputcsv( $fh, $row );
         }
         
         fclose( $fh );
         
         if( $this->wipe ) {
-            $this->wipe_audit_table( $table );
+            $this->wipe_audit_table($link, $table);
         }
     }
 
@@ -281,7 +281,7 @@ class cdc_audit_sync_mysql {
      *
      * @TODO:  add option to wipe only older than a specific age.
      */
-    private function wipe_audit_table( $table ) {
+    private function wipe_audit_table($link, $table) {
         
         $this->log( sprintf( 'wiping audit table: %s', $table ), __FILE__, __LINE__, self::log_info );
         
@@ -294,8 +294,8 @@ class cdc_audit_sync_mysql {
                 sleep(1);
             }
             
-            $result = @mysql_query( sprintf( 'select count(audit_pk) as cnt, min(audit_pk) as min, max(audit_pk) as max from `%s`', $table ) );
-            $row = @mysql_fetch_assoc( $result );
+            $result = @mysqli_query($link, sprintf( 'select count(audit_pk) as cnt, min(audit_pk) as min, max(audit_pk) as max from `%s`', $table ) );
+            $row = @mysqli_fetch_assoc($result);
             
             $cnt = @$row['cnt'];
             $min = @$row['min'];
@@ -309,7 +309,7 @@ class cdc_audit_sync_mysql {
             $this->log( sprintf( 'wiping audit table rows %s to %s', $min, $delmax ), __FILE__, __LINE__, self::log_info );
             
             $query = sprintf( 'delete from `%s` where audit_pk >= %s and audit_pk < %s', $table, $min, $delmax );
-            $result = mysql_query( $query );
+            $result = mysqli_query($link, $query);
             
             if( !$result ) {
                 throw new Exception( sprintf( "mysql error while wiping %s rows.  %s", $incr_amount, $query  ) );
@@ -325,8 +325,8 @@ class cdc_audit_sync_mysql {
         
         $cols = array();
         $i = 0;
-        while ($i < mysql_num_fields($result)) {
-            $meta = mysql_fetch_field($result, $i);
+        while ($i < mysqli_num_fields($result)) {
+            $meta = mysqli_fetch_field_direct($result, $i);
             $cols[] = $meta->name;
             $i ++;
         }
