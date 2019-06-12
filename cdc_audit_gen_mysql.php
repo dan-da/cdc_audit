@@ -192,18 +192,18 @@ class cdc_audit_gen_mysql {
             
             // Connect to the MySQL server
             $this->log( sprintf( 'Connecting to mysql. host = %s, user = %s, pass = %s ', $this->host, $this->user, $this->pass ),  __FILE__, __LINE__, self::log_debug );
-            $link = @mysql_connect($this->host,$this->user,$this->pass);
+            $link = @mysqli_connect($this->host,$this->user,$this->pass);
             if ($link){
                 $this->log( 'Connected to mysql.  Getting tables.',  __FILE__, __LINE__, self::log_info );
                 
                   // Select the database
-                if( !mysql_selectdb($this->db,$link) ) {
+                if( !mysqli_select_db($link, $this->db) ) {
                     throw new Exception( "Unable to select database {$this->db}");
                 }
                 
                 // Get all tables
-                $result = mysql_query('SHOW TABLES');
-                while ($row = mysql_fetch_array($result, MYSQL_NUM)) {
+                $result = mysqli_query($link, 'SHOW TABLES');
+                while ($row = mysqli_fetch_array($result, MYSQLI_NUM)) {
                     // Get table name
                     $table = $row[0]  ;
                     
@@ -219,18 +219,18 @@ class cdc_audit_gen_mysql {
                     
                     // Get table info
                     $sort_clause = '';  // default is unsorted.
-                    $struct = mysql_query("select Column_name as Field, Column_Type as Type, Is_Nullable as `Null`, Column_Key as `Key`, Column_Default as `Default`, Extra, Column_Comment as Comment from INFORMATION_SCHEMA.COLUMNS where TABLE_SCHEMA = '{$this->db}' and TABLE_NAME = '$table' $sort_clause");
+                    $struct = mysqli_query($link, "select Column_name as Field, Column_Type as Type, Is_Nullable as `Null`, Column_Key as `Key`, Column_Default as `Default`, Extra, Column_Comment as Comment from INFORMATION_SCHEMA.COLUMNS where TABLE_SCHEMA = '{$this->db}' and TABLE_NAME = '$table' $sort_clause");
             
                     $data = array();
-                    while ($row2 = mysql_fetch_array($struct, MYSQL_ASSOC)) {
+                    while ($row2 = mysqli_fetch_array($struct, MYSQLI_ASSOC)) {
                         $data[] = $row2;
                     }
                     
                     // Get triggers associated with table
-                    $struct = mysql_query("select trigger_name, EVENT_MANIPULATION, ACTION_STATEMENT from INFORMATION_SCHEMA.TRIGGERS where EVENT_OBJECT_TABLE = '$table' and ACTION_TIMING = 'AFTER'");
+                    $struct = mysqli_query($link, "select trigger_name, EVENT_MANIPULATION, ACTION_STATEMENT from INFORMATION_SCHEMA.TRIGGERS where EVENT_OBJECT_TABLE = '$table' and ACTION_TIMING = 'AFTER'");
             
                     $triggers = array();
-                    while ($row2 = mysql_fetch_array($struct, MYSQL_ASSOC)) {
+                    while ($row2 = mysqli_fetch_array($struct, MYSQLI_ASSOC)) {
                         $triggers[] = $row2;
                     }
                     
