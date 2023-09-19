@@ -406,7 +406,7 @@ DROP TRIGGER IF EXISTS `%1$s`;
 
 END;
 
-        $triggers_mask = '
+        $triggers_mask = <<< 'FINISH'
 -- %1$s after INSERT trigger.
 DELIMITER @@
 CREATE TRIGGER `%1$s_after_insert` AFTER INSERT ON `%1$s`
@@ -436,7 +436,7 @@ CREATE TRIGGER `%1$s_after_delete` AFTER DELETE ON `%1$s`
 %9$s
  END;
 @@
-';
+FINISH;
 
         $table_audit = $this->table_audit( $table );
 
