@@ -202,7 +202,7 @@ class cdc_audit_gen_mysql {
                 }
                 
                 // Get all tables
-                $result = mysqli_query($link, 'SHOW TABLES');
+                $result = mysqli_query($link, 'SHOW FULL TABLES WHERE Table_type = \'BASE TABLE\'');
                 while ($row = mysqli_fetch_array($result, MYSQLI_NUM)) {
                     // Get table name
                     $table = $row[0]  ;
